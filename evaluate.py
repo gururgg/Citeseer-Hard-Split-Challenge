@@ -3,6 +3,8 @@ import base64
 import numpy as np
 import torch
 import pandas as pd
+import json
+from datetime import datetime
 from sklearn.metrics import accuracy_score
 
 # -----------------------------
@@ -51,11 +53,28 @@ print(f"Challenge Accuracy: {acc_challenge:.4f}")
 print(f"Casual Accuracy: {acc_casual:.4f}")
 print(f"Discrepancy: {discrepancy:.4f}")
 
-# -----------------------------
-# Save results for leaderboard
-# -----------------------------
-pd.DataFrame([{
-    "challenge_score": acc_challenge,
-    "casual_score": acc_casual,
-    "discrepancy": discrepancy
-}]).to_csv("score.csv", index=False)
+
+entry = {
+    "user": os.environ.get("GITHUB_ACTOR", "unknown"),
+    "challenge_acc": float(challenge_acc),
+    "original_acc": float(original_acc),
+    "gap": float(original_acc - challenge_acc),
+    "timestamp": datetime.utcnow().isoformat()
+}
+
+leaderboard_path = "leaderboard.json"
+
+if os.path.exists(leaderboard_path):
+    with open(leaderboard_path) as f:
+        board = json.load(f)
+else:
+    board = []
+
+# keep best score per user
+board = [b for b in board if b["user"] != entry["user"]]
+board.append(entry)
+
+board = sorted(board, key=lambda x: x["challenge_acc"], reverse=True)
+
+with open(leaderboard_path, "w") as f:
+    json.dump(board, f, indent=2)

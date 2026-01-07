@@ -93,3 +93,29 @@ board = sorted(board, key=lambda x: x["challenge_acc"], reverse=True)
 
 with open(leaderboard_path, "w") as f:
     json.dump(board, f, indent=2)
+    
+    
+ md_path = "leaderboard.md"
+
+lines = [
+    "# 🏆 Leaderboard\n",
+    "\n",
+    "This leaderboard is automatically updated via GitHub Actions.\n",
+    "Only the **best challenge accuracy per user** is kept.\n",
+    "\n",
+    "| Rank | User | Challenge Accuracy | Original Accuracy | Gap | Timestamp |\n",
+    "|------|------|-------------------|-------------------|-----|-----------|\n",
+]
+
+for i, b in enumerate(board, start=1):
+    lines.append(
+        f"| {i} | {b['user']} | "
+        f"{b['challenge_acc']:.4f} | "
+        f"{b['original_acc']:.4f} | "
+        f"{b['gap']:.4f} | "
+        f"{b['timestamp']} |\n"
+    )
+
+with open(md_path, "w") as f:
+    f.writelines(lines)
+

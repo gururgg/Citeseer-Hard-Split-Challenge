@@ -18,7 +18,7 @@ def decode_tensor(secret_name, dtype=np.int64):
 # Load secrets
 # -----------------------------
 y = decode_tensor("PRIVATE_Y", dtype=np.int64)
-test_mask_challenge = decode_tensor("PRIVATE_TEST_MASK_CHALLANGE", dtype=np.bool_)
+test_mask_challenge = decode_tensor("PRIVATE_TEST_MASK_CHALLENGE", dtype=np.bool_)
 test_mask = decode_tensor("PRIVATE_TEST_MASK", dtype=np.bool_)
 
 # -----------------------------

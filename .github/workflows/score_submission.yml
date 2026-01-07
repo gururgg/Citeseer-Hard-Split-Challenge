@@ -5,16 +5,11 @@ on:
   pull_request:
     paths:
       - submissions/**
-  push:
-    branches:
-      - main
-    paths:
-      - submissions/**
   workflow_dispatch:
 
 permissions:
   contents: write
-  pull-requests: write
+  pull-requests: read
 
 jobs:
   evaluate:
@@ -44,17 +39,17 @@ jobs:
 
       
       - name: Commit leaderboard update
-        if: github.event_name == 'push'
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
 
-          if git diff --quiet leaderboard.json; then
+          git add leaderboard.json
+
+          if git diff --cached --quiet; then
             echo "No leaderboard changes"
           else
-            git add leaderboard.json
             git commit -m "Update leaderboard"
-            git push
+            git push origin HEAD:${{ github.head_ref }}
           fi
 
 

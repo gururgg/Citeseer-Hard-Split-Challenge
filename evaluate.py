@@ -64,6 +64,9 @@ print(f"Gap               : {gap:.4f}")
 # -----------------------------
 # Leaderboard update
 # -----------------------------
+
+user = os.environ.get("GITHUB_ACTOR", "unknown")
+
 entry = {
     "user": user,
     "challenge_acc": float(challenge_acc),
@@ -75,18 +78,16 @@ entry = {
 leaderboard_path = "leaderboard.json"
 
 
-if os.path.exists(leaderboard_path):    
+if os.path.exists(leaderboard_path):
     with open(leaderboard_path) as f:
         board = json.load(f)
+        if not isinstance(board, list):
+            board = []
+else:
+    board = []
 
-    if isinstance(board, str):
-        board = json.loads(board)
-
-    if not isinstance(board, list):
-        board = []
-
-# Keep best challenge score per user
-board = [b for b in board if b["user"] != user]
+# keep best score per user
+board = [b for b in board if b.get("user") != user]
 board.append(entry)
 
 board = sorted(board, key=lambda x: x["challenge_acc"], reverse=True)
@@ -118,4 +119,5 @@ for i, b in enumerate(board, start=1):
 
 with open(md_path, "w") as f:
     f.writelines(lines)
+
 

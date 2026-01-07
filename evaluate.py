@@ -74,11 +74,16 @@ entry = {
 
 leaderboard_path = "leaderboard.json"
 
-if os.path.exists(leaderboard_path):
+
+if os.path.exists(leaderboard_path):    
     with open(leaderboard_path) as f:
         board = json.load(f)
-else:
-    board = []
+
+    if isinstance(board, str):
+        board = json.loads(board)
+
+    if not isinstance(board, list):
+        board = []
 
 # Keep best challenge score per user
 board = [b for b in board if b["user"] != user]

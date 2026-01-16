@@ -14,6 +14,11 @@ on:
 jobs:
   evaluate:
     runs-on: ubuntu-latest
+    env:
+      PRIVATE_Y: ${{ secrets.LABELS }}
+      PRIVATE_TEST_MASK_CHALLENGE: ${{ secrets.TEST_MASK_CHALLANGE }}
+      PRIVATE_TEST_MASK: ${{ secrets.TEST_MASK }}
+
     permissions:
       contents: write
       pull-requests: write
@@ -33,12 +38,6 @@ jobs:
       run: |
         pip install -r requirements.txt
         
-    
-    - name: Download test labels
-      env:
-        PRIVATE_Y: ${{ secrets.LABELS }}
-        PRIVATE_TEST_MASK_CHALLENGE: ${{ secrets.TEST_MASK_CHALLANGE }}
-        PRIVATE_TEST_MASK: ${{ secrets.TEST_MASK }}
     
     - name: Find submission files
       id: find_submissions

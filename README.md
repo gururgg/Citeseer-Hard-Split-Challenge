@@ -65,13 +65,12 @@ Achieve a **small performance gap** between the challenge task and the original 
 
 ## 📁 Submission Format
 
-Participants must submit their predictions in a file named:
+Participants must submit their predictions in a file named as **submissions/team_name.csv**:
 
 ## 🏆 Evaluation
 
 - Submissions are evaluated automatically using **GitHub Actions**
 - True labels are stored securely and are **never exposed**
-- Only the **best challenge accuracy per participant** is kept
 - Results are displayed on the **public leaderboard**
 
 ---
@@ -89,22 +88,19 @@ Participants must submit their predictions in a file named:
 Good luck, and enjoy the challenge! 🧩  
 If you have ideas, insights, or improvements — feel free to share them!
 
-
-**[🏆 View Live Leaderboard](https://samuelmatia.github.io/gnn-role-transition-challenge/leaderboard.html)**
-
-
-
 ## 🏆 Leaderboard
 
 The leaderboard is automatically updated when you submit your solution via Pull Request.
 
-👉 **[View Live Leaderboard](https://gururgg.github.io/GNN-Mini-Challange/leaderboard.html)**
+
+**[🏆 View Live Leaderboard](https://gururgg.github.io/GNN-Mini-Challange/leaderboard.html)**
+
 
 The leaderboard shows:
-- **Rank**: Your position based on Weighted Macro-F1 score
+- **Rank**: Your position based on challange test set accuracy
 - **Team Name**: Your submission filename (without .csv)
-- **Weighted Macro-F1**: Primary evaluation metric
-- **Overall Macro-F1**: Overall performance across all transitions
-- **Rare Transitions F1**: Performance on rare transitions (< 5% frequency)
+- **Challenge Acc**: Challenge task test set accuracy
+- **Original Acc**: Original task test set accuracy
+- **Gap**: Performance gap between the challenge task and the original task
 
 

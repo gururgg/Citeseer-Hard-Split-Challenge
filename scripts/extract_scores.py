@@ -25,7 +25,7 @@ try:
     json_match = re.search(r'\{.*\}', content, re.DOTALL)
     if json_match:
         scores = json.loads(json_match.group())
-        print(f"{team_name}:{scores.get('weighted_f1', 0.0):.6f}:{scores.get('overall_macro_f1', 0.0):.6f}:{scores.get('rare_transitions_f1', 0.0):.6f}")
+        print(f"{team_name}:{scores.get('challenge_acc', 0.0):.6f}:{scores.get('original_acc', 0.0):.6f}:{scores.get('accuracy_gap', 0.0):.6f}")
     else:
         print(f"{team_name}:0.0:0.0:0.0", file=sys.stderr)
 except Exception as e:

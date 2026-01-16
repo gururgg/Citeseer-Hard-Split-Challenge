@@ -59,7 +59,7 @@ def evaluate(submission_file):
     print(f"Gap               : {gap:.4f}")
     
     scores = {
-        'challange_accuracy': challenge_acc,
+        'challenge_accuracy': challenge_acc,
         'original_accuracy': original_acc,
         'accuracy_gap': gap
     }

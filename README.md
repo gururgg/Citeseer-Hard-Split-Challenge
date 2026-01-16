@@ -1,109 +1,213 @@
-# 🧠 GNN Mini Challenge: Node Classification on CiteSeer
+# GNN Challenge: Role Transition Prediction in Temporal Networks
 
-Welcome to the **GNN Mini Challenge**!  
-In this challenge, participants perform a **node classification task** on the well-known **CiteSeer citation network dataset** using **Graph Neural Networks (GNNs)** or any other graph-based approach.
+## 🎯 Challenge Overview
 
----
+Welcome to the **Role Transition Prediction Challenge**! This competition focuses on predicting how user roles evolve over time in the Super User Stack Exchange temporal network.
 
-## 📊 Dataset: CiteSeer
+**[🏆 View Live Leaderboard](https://samuelmatia.github.io/gnn-role-transition-challenge/leaderboard.html)**
 
-The **CiteSeer** dataset is a widely used benchmark in graph representation learning and node classification tasks.
+### Problem Description
 
-It consists of:
-- **3,327 nodes** (scientific publications)
-- **4,732 edges** (citation links between publications)
-- **3,703-dimensional binary node features**, representing word occurrences in document abstracts
-- **6 node classes**, corresponding to different research topics
+The task is to predict **role transitions** - how a user's role evolves from one temporal snapshot to the next. Given a user's current role and their interaction history up to time `t`, predict their role at time `t+k`.
 
-CiteSeer has been extensively used in **state-of-the-art GNN papers**, including GCN, GAT, GraphSAGE, and many others.
+**Roles:**
+- **0 - Inactive**: User with minimal or no activity
+- **1 - Novice**: User who primarily asks questions (high in-degree, low out-degree)
+- **2 - Contributor**: User with balanced question-answer activity
+- **3 - Expert**: Highly active user who provides many answers (high out-degree)
+- **4 - Moderator**: Very active user who helps many different users (high activity, high unique recipients)
 
-In the **original setup**, the dataset comes with predefined:
-- training nodes
-- validation nodes
-- test nodes  
+### What's Challenging ? 
 
-These splits are commonly used to benchmark node classification performance.
+1. **Temporal Shift**: Training data comes from 2009-2013, validation from 2013-2014, and test from 2014-2016. The distribution of user behaviors and network patterns changes over time, making generalization challenging.
 
----
+2. **Rare Transitions**: The evaluation metric focuses on rare transitions (e.g., "Novice → Expert", "Contributor → Inactive"), which are the most valuable to predict but occur infrequently.
 
-## 🎯 Challenge Setup
+3. **Class Imbalance**: Role distributions are highly imbalanced, with the vast majority of users being Inactive (~78% of current roles, ~88% of next roles), followed by Contributors (~9%) and Novices (~8.5%).
 
-In this challenge, we define a **new and harder classification task**.
+4. **Graph Structure**: Features must be extracted from the temporal graph structure alone - no external data or text features are allowed.
 
-Instead of using the original dataset splits, we introduce:
-- `train_mask_challenge`
-- `val_mask_challenge`
-- `test_mask_challenge`
+5. **Temporal Dynamics**: The challenge requires modeling both the temporal evolution of individual users and the network-level dynamics.
 
-These masks define **new train, validation, and test nodes**, making the task **more challenging than the original CiteSeer benchmark**.
 
-### 🔒 Hidden Labels
-- Node **features and graph structure are fully accessible**
-- However, the **labels of test challenge nodes are hidden**
-- Hidden labels are set to **`-1`**, meaning:
-  > You do not have direct access to the true labels of challenge nodes
+## 📊 Dataset
 
-Participants must **infer labels purely from graph structure and node features**.
+The dataset is based on the **Super User Stack Exchange temporal network** from SNAP:
+- **Nodes**: Users (194,085 unique users)
+- **Edges**: Temporal interactions (1,443,339 edges)
+- **Time Span**: ~7 years (2009-2016)
+- **Edge Types**: Answers to questions, comments to questions, comments to answers
 
----
+**Files available in `data/processed/` :**
+- `train.parquet` - Training set with labels 
+- `test_features.parquet` - Test set features without labels
 
-## 🧪 Objective
+#### Column Descriptions
 
-The **main goal** is to achieve the **highest classification accuracy on `test_mask_challenge`**.
+#### train.parquet (16 columns)
 
-In addition:
-- You may use the **original CiteSeer masks** for analysis
-- Comparing the properties of
-  - original test set
-  - challange val set
-  - challenge test set  
-  can provide useful insights and hints. You have access to features and graph structure. If you find the cause of the challange, it will be easier to solve the challange :blush:
+| Column Name | Type | Description |
+|-------------|------|-------------|
+| `user_id` | int64 | Unique user identifier |
+| `snapshot_id` | int64 | Temporal snapshot identifier (3-month windows) |
+| `current_role` | int64 | Current role (0-4) |
+| `next_role` | int64 | Next role to predict (target variable) |
+| `transition_label` | string | Transition label (e.g., "2->0") |
+| `snapshot_start` | datetime64[ns] | Start timestamp of current snapshot |
+| `snapshot_end` | datetime64[ns] | End timestamp of current snapshot |
+| `next_snapshot_start` | datetime64[ns] | Start timestamp of next snapshot |
+| `next_snapshot_end` | datetime64[ns] | End timestamp of next snapshot |
+| `out_degree` | int64 | Number of outgoing edges (answers/comments given) |
+| `in_degree` | int64 | Number of incoming edges (questions/comments received) |
+| `num_unique_recipients` | int64 | Number of unique users this user interacted with (outgoing) |
+| `num_unique_sources` | int64 | Number of unique users who interacted with this user (incoming) |
+| `total_interactions` | int64 | Total number of interactions in the snapshot |
+| `activity_span_days` | int64 | Number of days between first and last interaction |
+| `avg_interactions_per_day` | float64 | Average interactions per day (total_interactions / activity_span_days) |
 
-🎯 **Bonus objective:**  
-Achieve a **small performance gap** between the challenge task and the original task, indicating strong generalization.
+#### test_features.parquet (12 columns)
 
----
+Same structure as `train.parquet`, but **without** the following columns (labels are hidden):
+-  `next_role` (to be predicted)
+-  `transition_label` (to be predicted)
+-  `next_snapshot_start` (future information)
+-  `next_snapshot_end` (future information)
 
-## 📁 Submission Format
 
-Participants must submit their predictions in a file located in **submissions/submission.csv**:
+#### Example Data Row
 
-### File requirements:
-- The file must contain **exactly one column**
-- Column name must be **`preds`**
-- Each row corresponds to **one node**
-- Values must be **integer class labels** in `[0, 5]`
-
-### 📌 Example
-
-```csv
-preds
-2
-4
-1
-0
-3
+```python
+{
+    'user_id': 34217,
+    'snapshot_id': 7,
+    'current_role': 2,           # Contributor
+    'next_role': 0,              # Inactive (to predict)
+    'transition_label': '2->0',  # Contributor -> Inactive
+    'snapshot_start': Timestamp('2008-08-02 04:32:45'),
+    'snapshot_end': Timestamp('2008-11-02 04:32:45'),
+    'out_degree': 2,
+    'in_degree': 2,
+    'num_unique_recipients': 2,
+    'num_unique_sources': 2,
+    'total_interactions': 4,
+    'activity_span_days': 51,
+    'avg_interactions_per_day': 0.078
+}
 ```
 
 
+## 🎯 Evaluation Metric
 
-## 🏆 Evaluation
+**Primary Metric: Weighted Macro-F1 Score**
 
-- Submissions are evaluated automatically using **GitHub Actions**
-- True labels are stored securely and are **never exposed**
-- Only the **best challenge accuracy per participant** is kept
-- Results are displayed on the **leaderboard.md**
+The primary evaluation metric uses **inverse frequency weighting**, giving more importance to rare transitions while still considering all transitions. This balances the need to predict rare but valuable transitions (e.g., "Novice → Expert", "Contributor → Inactive") with overall model performance.
+
+The final score is computed as:
+```
+Score = Weighted Macro-F1 Score
+       = Macro-F1 with sample weights = 1 / transition_frequency
+```
+
+This metric:
+- Rewards accurate prediction of rare transitions (higher weight)
+- Still considers common transitions (lower weight)
+- Provides a balanced evaluation across all transition types
+
+**Additional metrics reported:**
+- Overall Macro-F1 (unweighted)
+- Rare Transitions Macro-F1 (transitions occurring in < 5% of cases)
+- Per-transition F1 scores
+
+
+## 📋 Constraints
+
+To ensure fair competition and focus on scalable GNN methods:
+
+1. **No External Data**  
+   Only the provided graph and features may be used.
+
+2. **Graph Features Only**  
+   No handcrafted features or external embeddings are allowed.
+
+3. **Train on CPU Only**  
+   - Models must be trainable on a standard CPU environment.
+   - Participants are encouraged to use **efficient training strategies** such as:
+     - neighbor sampling 
+     - subgraph or mini-batch training
+     - memory-efficient message passing
+   - Full-batch training on the entire graph is discouraged if it leads to excessive computation time or memory usage.
+
+
+## 🤝 How to Submit
+
+### Submission Process
+
+1. **Fork this repository** to your GitHub account.
+
+2. **Use the provided data**, located in `data/processed/`:
+   - `train.parquet`
+   - `test_features.parquet`
+
+3. **Build your model** using the starter code or your own implementation.
+
+4. **Generate predictions** for the test set and save them as a CSV file with the required format:
+
+   **Required columns:**
+   - `user_id`: User identifier  
+   - `snapshot_id`: Snapshot identifier  
+   - `predicted_role`: Predicted next role (integer values from 0 to 4)
+
+   **Example submission:**
+```csv
+   user_id,snapshot_id,predicted_role
+   123,5,2
+   456,5,3
+   789,6,1 
+```
+
+**Your submission file should be named: submissions/your_team_name.csv**
+
+
+5. **Score Your Submission**
+
+```bash
+python scoring_script.py submissions/your_team_name.csv
+```
+
+6. **Create a Pull Request** with your submission file:
+   - Add your CSV file to `submissions/your_team_name.csv`
+   - The GitHub Action will automatically evaluate your submission
+   - If valid, your score will appear on the leaderboard
+
+
+
+## 🏆 Leaderboard
+
+The leaderboard is automatically updated when you submit your solution via Pull Request.
+
+👉 **[View Live Leaderboard](https://gururgg.github.io/GNN-Mini-Challange/leaderboard.html)**
+
+The leaderboard shows:
+- **Rank**: Your position based on Weighted Macro-F1 score
+- **Team Name**: Your submission filename (without .csv)
+- **Weighted Macro-F1**: Primary evaluation metric
+- **Overall Macro-F1**: Overall performance across all transitions
+- **Rare Transitions F1**: Performance on rare transitions (< 5% frequency)
+
+
+
+## 📚 References
+
+- **Dataset**: [SNAP Super User Network](https://snap.stanford.edu/data/sx-superuser.html)
+- **GNNs**: [Basira Lab youtube](https://www.youtube.com/playlist?list=PLug43ldmRSo14Y_vt7S6vanPGh-JpHR7T)
+- **Tutorials GNNs**: [Basira Lab Github](https://github.com/basiralab/dgl)
+
+
+## 📄 License
+
+See LICENSE file for details.
 
 ---
 
-## 🚀 Getting Started
+**Good luck and happy modeling! 🚀**
 
-1. Load the **CiteSeer graph** and node features by reading the **data/README.md**
-2. Train your model using only the provided **train challenge masks**
-3. Generate predictions for **all nodes**
-4. Save your predictions in `submission.csv`
-5. Submit your file via a **Pull Request** by addin **`submissions/submission.csv`** file
-
----
-
-Good luck, and enjoy the challenge! 🧩  

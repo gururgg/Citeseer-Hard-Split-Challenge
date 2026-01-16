@@ -50,6 +50,7 @@ jobs:
         python scripts/generate_leaderboard.py
     
     - name: Commit and push leaderboard
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"

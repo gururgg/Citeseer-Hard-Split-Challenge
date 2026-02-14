@@ -1,7 +1,7 @@
-# 🧠 GNN Mini Challenge: Node Classification on CiteSeer
+# 🧠 Citeseer Hard Split Challenge
 
-Welcome to the **GNN Mini Challenge**!  
-In this challenge, participants perform a **node classification task** on the well-known **CiteSeer citation network dataset** using **Graph Neural Networks (GNNs)** or any other graph-based approach.
+Welcome to the **Citeseer Hard Split Challenge**!  
+In this challenge, participants perform a **node classification task** on the well-known **CiteSeer citation network dataset** using **Graph Neural Networks (GNNs)** or any other graph-based approach, but test nodes are significantly different than the publicly used version.
 
 ---
 
@@ -53,40 +53,65 @@ The **main goal** is to achieve the **highest classification accuracy on `test_m
 
 In addition:
 - You may use the **original CiteSeer masks** for analysis
-- Comparing performance between:
+- Comparing the structural or feature properties between:
   - original test set
   - challenge test set  
-  can provide useful insights and hints
+  can provide useful insights and hints. 
 
 🎯 **Bonus objective:**  
 Achieve a **small performance gap** between the challenge task and the original task, indicating strong generalization.
 
 ---
 
-## 📁 Submission Format
+## 📁 How to Submit?
 
-Participants must submit their predictions in a file named as **submissions/team_name.csv**:
+Train your model using the data inside the **data** folder. Predict labels for every node and write the predictions in the following format :
+
+```csv
+preds
+3
+1
+2
+...
+```
+Save it as a `.csv` file (e.g. `my_submission.csv`) in the **`submissions/`** folder.  
+**Note:** `.csv` files in `submissions/` are git-ignored, so your raw submission will not be pushed. You will submit an **encrypted** version instead.
+
+From the project root, run the encryption script so it can find your CSV and the encryption key:
+
+**Linux / macOS:**
+```bash
+cd submissions
+python encrypt_submissions.py
+cd ..
+```
+
+**Windows (Command Prompt):**
+```cmd
+cd submissions
+python encrypt_submissions.py
+cd ..
+```
+
+**Windows (PowerShell):**
+```powershell
+cd submissions
+python encrypt_submissions.py
+cd ..
+```
+This creates a `.enc` file next to each `.csv` in `submissions/` (e.g. `my_submission.csv.enc`). Only `.enc` files are tracked by git; your `.csv` stays local. Please rename your `.enc` file such that it is **github_name.enc**
+
+---
 
 ## 🏆 Evaluation
-
+- Submit your `.enc` file with `metadata.json` under the `submissions/`
 - Submissions are evaluated automatically using **GitHub Actions**
 - True labels are stored securely and are **never exposed**
 - Results are displayed on the **public leaderboard**
 
 ---
 
-## 🚀 Getting Started
-
-1. Load the **CiteSeer graph** and node features
-2. Train your model using the provided **challenge masks**
-3. Generate predictions for **all nodes**
-4. Save your predictions in `submission.csv`
-5. Submit your file via a **Pull Request** to the `submissions/` folder
-
----
-
 Good luck, and enjoy the challenge! 🧩  
-If you have ideas, insights, or improvements — feel free to share them!
 
 ## 🏆 Leaderboard
 
@@ -98,7 +123,7 @@ The leaderboard is automatically updated when you submit your solution via Pull 
 
 The leaderboard shows:
 - **Rank**: Your position based on challange test set accuracy
-- **Team Name**: Your submission filename (without .csv)
+- **Team Name**: Your Github username (without .csv)
 - **Challenge Acc**: Challenge task test set accuracy
 - **Original Acc**: Original task test set accuracy
 - **Gap**: Performance gap between the challenge task and the original task

@@ -26,94 +26,93 @@ jobs:
       pull-requests: write
 
     steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - uses: actions/setup-python@v5
-      with:
-        python-version: '3.10'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
 
-    - run: pip install -r requirements.txt
+      - run: pip install -r requirements.txt
 
-    # ---------------------------------------------------------
-    # Enforce exactly ONE .enc
-    # ---------------------------------------------------------
-    - name: Validate exactly one encrypted submission
-      run: python scripts/validate_submission.py
-      env:
-        GITHUB_ACTOR: ${{ github.actor }}
-     			
+      # ---------------------------------------------------------
+      # Enforce exactly ONE .enc
+      # ---------------------------------------------------------
+      - name: Validate exactly one encrypted submission
+        run: python scripts/validate_submission.py
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
 
-    # ---------------------------------------------------------
-    # Decrypt
-    # ---------------------------------------------------------
-    - name: Decrypt submission
-      id: decrypt
-      run: python scripts/process_submission.py
+      # ---------------------------------------------------------
+      # Decrypt
+      # ---------------------------------------------------------
+      - name: Decrypt submission
+        id: decrypt
+        run: python scripts/process_submission.py
 
-    # ---------------------------------------------------------
-    # Evaluate
-    # ---------------------------------------------------------
-    - name: Evaluate submission
-      run: |
-        mkdir -p results
+      # ---------------------------------------------------------
+      # Evaluate
+      # ---------------------------------------------------------
+      - name: Evaluate submission
+        run: |
+          mkdir -p results
 
-        TEAM_NAME="${{ steps.decrypt.outputs.team_name }}"
-        FILE="${{ steps.decrypt.outputs.csv_path }}"
+          TEAM_NAME="${{ steps.decrypt.outputs.team_name }}"
+          FILE="${{ steps.decrypt.outputs.csv_path }}"
 
-        python scoring_script.py "$FILE" --json > "results/${TEAM_NAME}_output.txt" 2>&1 || true
-        python scripts/extract_scores.py "$TEAM_NAME" >> results/scores.txt
+          python scoring_script.py "$FILE" --json > "results/${TEAM_NAME}_output.txt" 2>&1 || true
+          python scripts/extract_scores.py "$TEAM_NAME" >> results/scores.txt
 
-    # ---------------------------------------------------------
-    # Cleanup decrypted file
-    # ---------------------------------------------------------
-    - name: Cleanup decrypted file
-      run: rm -f "${{ steps.decrypt.outputs.csv_path }}"
+      # ---------------------------------------------------------
+      # Cleanup decrypted file
+      # ---------------------------------------------------------
+      - name: Cleanup decrypted file
+        run: rm -f "${{ steps.decrypt.outputs.csv_path }}"
 
-    # ---------------------------------------------------------
-    # PR: Comment only
-    # ---------------------------------------------------------
-    - name: Comment PR with results
-      if: github.event_name == 'pull_request'
-      uses: actions/github-script@v6
-      with:
-        script: |
-          const fs = require('fs');
-          const path = require('path');
+      # ---------------------------------------------------------
+      # PR: Comment only
+      # ---------------------------------------------------------
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
 
-          let comment = "## 📊 Submission Evaluation Results\n\n";
+            let comment = "## 📊 Submission Evaluation Results\n\n";
 
-          const files = fs.readdirSync('results');
-          for (const file of files) {
-            if (file.endsWith('_output.txt')) {
-              const teamName = file.replace('_output.txt', '');
-              const content = fs.readFileSync(path.join('results', file), 'utf8');
-              comment += `### ${teamName}\n\n\`\`\`\n${content}\n\`\`\`\n\n`;
+            const files = fs.readdirSync('results');
+            for (const file of files) {
+              if (file.endsWith('_output.txt')) {
+                const teamName = file.replace('_output.txt', '');
+                const content = fs.readFileSync(path.join('results', file), 'utf8');
+                comment += `### ${teamName}\n\n\`\`\`\n${content}\n\`\`\`\n\n`;
+              }
             }
-          }
 
-          github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: comment
-          });
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
 
-    # ---------------------------------------------------------
-    # PUSH TO MAIN: Update leaderboard
-    # ---------------------------------------------------------
-    - name: Update leaderboard
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      run: |
-        python scripts/update_leaderboard_from_scores.py
-        python scripts/generate_leaderboard.py
+      # ---------------------------------------------------------
+      # PUSH TO MAIN: Update leaderboard
+      # ---------------------------------------------------------
+      - name: Update leaderboard
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          python scripts/update_leaderboard_from_scores.py
+          python scripts/generate_leaderboard.py
 
-    - name: Commit and push leaderboard
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git add leaderboard.json leaderboard.html
-        git diff --staged --quiet || git commit -m "Auto-update leaderboard [skip ci]"
-        git push || echo "Nothing to push"
+      - name: Commit and push leaderboard
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add leaderboard.json leaderboard.html
+          git diff --staged --quiet || git commit -m "Auto-update leaderboard [skip ci]"
+          git push || echo "Nothing to push"

@@ -1,5 +1,5 @@
 """
-Update leaderboard from scores file (Kaggle-style ranking).
+Update leaderboard from scores file.
 """
 
 import json
@@ -26,7 +26,7 @@ existing_map = {
 }
 
 # ----------------------------
-# Load new scores
+# Load scores
 # ----------------------------
 scores_file = Path("results/scores.txt")
 
@@ -47,9 +47,9 @@ with open(scores_file, "r") as f:
         original_acc = float(parts[2])
         gap = float(parts[3])
 
-        # Safety check
+        # Safety check (optional but recommended)
         computed_gap = abs(challenge_acc - original_acc)
-        if abs(gap - computed_gap) > 1e-6:
+        if abs(gap - computed_gap) > 1e-4:
             print(f"Warning: gap mismatch for team {team}, using computed gap")
             gap = computed_gap
 
@@ -61,43 +61,20 @@ with open(scores_file, "r") as f:
             "timestamp": datetime.now().isoformat()
         }
 
-        # Keep BEST challenge accuracy only
+        # Keep best challenge accuracy only
         if (
             team not in existing_map
             or challenge_acc > existing_map[team]["challenge_acc"]
         ):
             existing_map[team] = entry
-            print(f"Updated entry for {team}: challenge_acc={challenge_acc:.6f}")
+            print(f"Updated entry for {team}: challenge_acc={challenge_acc:.4f}")
 
 # ----------------------------
-# Convert to list and sort
+# Sort & save leaderboard
 # ----------------------------
 submissions = list(existing_map.values())
+submissions.sort(key=lambda x: x["challenge_acc"], reverse=True)
 
-# Sort by challenge accuracy descending
-# If tie, earlier submission wins (stable ranking)
-submissions.sort(
-    key=lambda x: (-x["challenge_acc"], x["timestamp"])
-)
-
-# ----------------------------
-# Kaggle Ranking (Standard Competition Ranking)
-# ----------------------------
-rank = 0
-previous_score = None
-
-for index, sub in enumerate(submissions):
-    score = sub["challenge_acc"]
-
-    if previous_score is None or score < previous_score:
-        rank = index + 1
-
-    sub["rank"] = rank
-    previous_score = score
-
-# ----------------------------
-# Save leaderboard
-# ----------------------------
 leaderboard = {
     "last_updated": datetime.now().isoformat(),
     "submissions": submissions

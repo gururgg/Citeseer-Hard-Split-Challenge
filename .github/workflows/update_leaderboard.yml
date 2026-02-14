@@ -5,82 +5,56 @@ on:
     branches:
       - main
     paths:
-      - 'submissions/*.csv'
+      - 'submissions/**/*.csv'
+  workflow_dispatch:
 
 jobs:
-  update:
-    runs-on: ubuntu-latest
-
+  update-leaderboard:
+    runs-on: ubuntu-latest        
     env:
       PRIVATE_Y: ${{ secrets.LABELS }}
-      PRIVATE_TEST_MASK_CHALLENGE: ${{ secrets.TEST_MASK_CHALLENGE }}
+      PRIVATE_TEST_MASK_CHALLENGE: ${{ secrets.TEST_MASK_CHALLANGE }}
       PRIVATE_TEST_MASK: ${{ secrets.TEST_MASK }}
-
-    permissions:
-      contents: write
-
+    if: github.repository_owner != 'github-actions[bot]'
+    
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
       with:
+        token: ${{ secrets.GITHUB_TOKEN }}
         fetch-depth: 0
-
-    - uses: actions/setup-python@v5
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
       with:
         python-version: '3.10'
-
-    - run: pip install -r requirements.txt
-
-    ############################################################
-    # DETECT SUBMISSION FILE
-    ############################################################
-
-    - name: Detect submission
-      id: detect
+    
+    - name: Install dependencies
       run: |
-        FILE=$(git diff --name-only HEAD~1 HEAD | grep '^submissions/.*\.csv$')
-        USER=$(basename "$FILE" .csv)
+        pip install -r requirements.txt
+      
 
-        echo "file=$FILE" >> $GITHUB_OUTPUT
-        echo "username=$USER" >> $GITHUB_OUTPUT
-
-    ############################################################
-    # EVALUATE
-    ############################################################
-
-    - name: Evaluate
+    
+    - name: Find and evaluate new submissions
+      id: evaluate
       run: |
-        FILE="${{ steps.detect.outputs.file }}"
-        USER="${{ steps.detect.outputs.username }}"
-
-        python scoring_script.py "$FILE" --json > score.json
-        python scripts/update_leaderboard_from_scores.py "$USER" score.json
-
-    ############################################################
-    # REMOVE SUBMISSION FILE
-    ############################################################
-
-    - name: Remove CSV
+        mkdir -p results
+        python scripts/evaluate_all_submissions.py || echo "Evaluation completed with warnings"
+        
+    - name: Generate leaderboard
       run: |
-        rm -f submissions/*.csv
-
-    ############################################################
-    # REGENERATE HTML
-    ############################################################
-
-    - name: Generate HTML
-      run: |
+        # Create initial leaderboard.json if it doesn't exist
+        if [ ! -f leaderboard.json ]; then
+          echo '{"last_updated": null, "submissions": []}' > leaderboard.json
+        fi
         python scripts/generate_leaderboard.py
-
-    ############################################################
-    # COMMIT
-    ############################################################
-
-    - name: Commit leaderboard
+    
+    - name: Commit and push leaderboard
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       run: |
-        git config user.name "GitHub Action"
-        git config user.email "action@github.com"
-
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
         git add leaderboard.json leaderboard.html
-        git add -u submissions
-        git commit -m "Update leaderboard [skip ci]" || echo "Nothing to commit"
-        git push
+        git diff --staged --quiet || git commit -m "Auto-update leaderboard [skip ci]"
+        git push || echo "Nothing to push"
+

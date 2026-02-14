@@ -1,9 +1,13 @@
 import os
 import sys
 
+# Get absolute project root (one level above /scripts)
 current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.abspath(os.path.join(current_dir, "../../"))
-sys.path.append(project_root)
+project_root = os.path.abspath(os.path.join(current_dir, ".."))
+
+# Add project root to Python path if not already there
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
 from encryption.decrypt import decrypt_file_content
 

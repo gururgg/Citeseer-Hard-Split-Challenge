@@ -203,8 +203,8 @@ def generate_html(leaderboard):
         <tr>
             <td>{idx}</td>
             <td><strong>{entry['team']}</strong></td>
-            <td class="num">{entry['challenge_acc']:.4f}</td>
-            <td class="num">{entry['original_acc']:.4f}</td>
+            <td class="num">{entry['challenge_accuracy']:.4f}</td>
+            <td class="num">{entry['original_accuracy']:.4f}</td>
             <td class="num gap">{entry['gap']:.4f}</td>
             <td>{timestamp}</td>
         </tr>

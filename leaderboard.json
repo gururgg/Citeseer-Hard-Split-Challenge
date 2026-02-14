@@ -1,13 +1,21 @@
 {
-  "last_updated": "2026-02-14T13:14:59.622616",
+  "last_updated": "2026-02-14T13:28:24.031682",
   "submissions": [
+    {
+      "team": "gururgg",
+      "challenge_accuracy": 1.0,
+      "original_accuracy": 1.0,
+      "gap": 0.0,
+      "timestamp": "2026-02-14T13:28:24.003165",
+      "rank": 1
+    },
     {
       "team": "GG",
       "challenge_accuracy": 0.659,
       "original_accuracy": 0.6145,
       "gap": 0.0445,
       "timestamp": "2026-01-16T14:30:00",
-      "rank": 1
+      "rank": 2
     }
   ]
 }

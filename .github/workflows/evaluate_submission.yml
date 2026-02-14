@@ -40,18 +40,10 @@ jobs:
     # Enforce exactly ONE .enc
     # ---------------------------------------------------------
     - name: Validate exactly one encrypted submission
-      run: |
-        COUNT=$(ls submissions/*.enc 2>/dev/null | wc -l)
-
-        if [ "$COUNT" -eq 0 ]; then
-          echo "❌ No .enc file found."
-          exit 1
-        fi
-
-        if [ "$COUNT" -gt 1 ]; then
-          echo "❌ Only ONE .enc allowed per PR."
-          exit 1
-        fi
+      run: python scripts/validate_submission.py
+      env:
+        GITHUB_ACTOR: ${{ github.actor }}
+     			
 
     # ---------------------------------------------------------
     # Decrypt

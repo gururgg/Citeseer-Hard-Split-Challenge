@@ -1,60 +1,59 @@
 name: Update Leaderboard
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
     paths:
-      - 'submissions/**/*.csv'
-  workflow_dispatch:
+      - 'leaderboard.json'
 
 jobs:
   update-leaderboard:
-    runs-on: ubuntu-latest        
-    env:
-      PRIVATE_Y: ${{ secrets.LABELS }}
-      PRIVATE_TEST_MASK_CHALLENGE: ${{ secrets.TEST_MASK_CHALLANGE }}
-      PRIVATE_TEST_MASK: ${{ secrets.TEST_MASK }}
-    if: github.repository_owner != 'github-actions[bot]'
-    
+    runs-on: ubuntu-latest
+
+    if: github.actor != 'github-actions[bot]'
+
+    permissions:
+      contents: write
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
-        token: ${{ secrets.GITHUB_TOKEN }}
         fetch-depth: 0
-    
+
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.10'
-    
+
     - name: Install dependencies
       run: |
         pip install -r requirements.txt
-      
 
-    
-    - name: Find and evaluate new submissions
-      id: evaluate
+    ############################################################
+    # REGENERATE HTML FROM EXISTING LEADERBOARD.JSON
+    ############################################################
+
+    - name: Regenerate leaderboard HTML
       run: |
-        mkdir -p results
-        python scripts/evaluate_all_submissions.py || echo "Evaluation completed with warnings"
-        
-    - name: Generate leaderboard
-      run: |
-        # Create initial leaderboard.json if it doesn't exist
         if [ ! -f leaderboard.json ]; then
-          echo '{"last_updated": null, "submissions": []}' > leaderboard.json
+          echo "No leaderboard.json found. Nothing to rebuild."
+          exit 0
         fi
+
         python scripts/generate_leaderboard.py
-    
-    - name: Commit and push leaderboard
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    ############################################################
+    # COMMIT IF HTML CHANGED
+    ############################################################
+
+    - name: Commit and push leaderboard HTML
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
-        git add leaderboard.json leaderboard.html
-        git diff --staged --quiet || git commit -m "Auto-update leaderboard [skip ci]"
-        git push || echo "Nothing to push"
 
+        git add leaderboard.html
+        git diff --staged --quiet || git commit -m "Rebuild leaderboard HTML [skip ci]"
+        git push || echo "Nothing to push"

@@ -1,11 +1,20 @@
 {
-    "submissions": [
-        {
-            "team": "GG",
-            "challenge_accuracy": 0.6590,
-            "original_accuracy": 0.6145,
-            "gap": 0.0445,
-            "timestamp": "2026-01-16T14:30:00"
-        }
-    ]
+  "last_updated": "2026-02-14T11:57:41.482978",
+  "submissions": [
+    {
+      "team": "gururgg",
+      "submission_file": "/home/runner/work/GNN-Mini-Challange/GNN-Mini-Challange/submissions/gururgg.csv",
+      "challenge_accuracy": 1.0,
+      "original_accuracy": 1.0,
+      "gap": 0.0,
+      "timestamp": "2026-02-14T11:57:41.482970"
+    },
+    {
+      "team": "GG",
+      "challenge_accuracy": 0.659,
+      "original_accuracy": 0.6145,
+      "gap": 0.0445,
+      "timestamp": "2026-01-16T14:30:00"
+    }
+  ]
 }

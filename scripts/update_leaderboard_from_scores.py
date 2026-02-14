@@ -55,7 +55,7 @@ with open(scores_file, "r") as f:
 
         entry = {
             "team": team,
-            "challenge_acc": challange_acc,
+            "challenge_acc": challenge_acc,
             "original_acc": original_acc,
             "gap": gap,
             "timestamp": datetime.now().isoformat()

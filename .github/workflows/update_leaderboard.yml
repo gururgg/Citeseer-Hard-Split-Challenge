@@ -1,59 +1,86 @@
 name: Update Leaderboard
 
 on:
-  workflow_dispatch:
   push:
     branches:
       - main
     paths:
-      - 'leaderboard.json'
+      - 'submissions/*.csv'
 
 jobs:
-  update-leaderboard:
+  update:
     runs-on: ubuntu-latest
 
-    if: github.actor != 'github-actions[bot]'
+    env:
+      PRIVATE_Y: ${{ secrets.LABELS }}
+      PRIVATE_TEST_MASK_CHALLENGE: ${{ secrets.TEST_MASK_CHALLENGE }}
+      PRIVATE_TEST_MASK: ${{ secrets.TEST_MASK }}
 
     permissions:
       contents: write
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
+    - uses: actions/setup-python@v5
       with:
         python-version: '3.10'
 
-    - name: Install dependencies
-      run: |
-        pip install -r requirements.txt
+    - run: pip install -r requirements.txt
 
     ############################################################
-    # REGENERATE HTML FROM EXISTING LEADERBOARD.JSON
+    # DETECT SUBMISSION FILE
     ############################################################
 
-    - name: Regenerate leaderboard HTML
+    - name: Detect submission
+      id: detect
       run: |
-        if [ ! -f leaderboard.json ]; then
-          echo "No leaderboard.json found. Nothing to rebuild."
-          exit 0
-        fi
+        FILE=$(git diff --name-only HEAD~1 HEAD | grep '^submissions/.*\.csv$')
+        USER=$(basename "$FILE" .csv)
 
+        echo "file=$FILE" >> $GITHUB_OUTPUT
+        echo "username=$USER" >> $GITHUB_OUTPUT
+
+    ############################################################
+    # EVALUATE
+    ############################################################
+
+    - name: Evaluate
+      run: |
+        FILE="${{ steps.detect.outputs.file }}"
+        USER="${{ steps.detect.outputs.username }}"
+
+        python scoring_script.py "$FILE" --json > score.json
+        python scripts/update_leaderboard_from_scores.py "$USER" score.json
+
+    ############################################################
+    # REMOVE SUBMISSION FILE
+    ############################################################
+
+    - name: Remove CSV
+      run: |
+        rm -f submissions/*.csv
+
+    ############################################################
+    # REGENERATE HTML
+    ############################################################
+
+    - name: Generate HTML
+      run: |
         python scripts/generate_leaderboard.py
 
     ############################################################
-    # COMMIT IF HTML CHANGED
+    # COMMIT
     ############################################################
 
-    - name: Commit and push leaderboard HTML
+    - name: Commit leaderboard
       run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
+        git config user.name "GitHub Action"
+        git config user.email "action@github.com"
 
-        git add leaderboard.html
-        git diff --staged --quiet || git commit -m "Rebuild leaderboard HTML [skip ci]"
-        git push || echo "Nothing to push"
+        git add leaderboard.json leaderboard.html
+        git add -u submissions
+        git commit -m "Update leaderboard [skip ci]" || echo "Nothing to commit"
+        git push

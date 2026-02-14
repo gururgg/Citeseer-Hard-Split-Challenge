@@ -4,12 +4,6 @@ on:
   pull_request:
     paths:
       - 'submissions/*.csv'
-  push:
-    branches:
-      - main
-    paths:
-      - 'submissions/*.csv'
-  workflow_dispatch:
 
 jobs:
   evaluate:
@@ -17,173 +11,73 @@ jobs:
 
     env:
       PRIVATE_Y: ${{ secrets.LABELS }}
-      PRIVATE_TEST_MASK_CHALLENGE: ${{ secrets.TEST_MASK_CHALLANGE }}
+      PRIVATE_TEST_MASK_CHALLANGE: ${{ secrets.TEST_MASK_CHALLANGE }}
       PRIVATE_TEST_MASK: ${{ secrets.TEST_MASK }}
 
     permissions:
-      contents: write
       pull-requests: write
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+    - uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
+    - uses: actions/setup-python@v5
       with:
         python-version: '3.10'
 
-    - name: Install dependencies
-      run: |
-        pip install -r requirements.txt
+    - run: pip install -r requirements.txt
 
     ############################################################
-    # VALIDATE SUBMISSION (PR ONLY)
+    # VALIDATE SUBMISSION
     ############################################################
 
     - name: Validate submission
       id: validate
-      if: github.event_name == 'pull_request'
       run: |
-        git fetch origin ${{ github.base_ref }}
-
-        FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '^submissions/.*\.csv$' || true)
-        COUNT=$(echo "$FILES" | wc -w)
+        FILE=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep '^submissions/.*\.csv$')
+        COUNT=$(echo "$FILE" | wc -w)
 
         if [ "$COUNT" -ne 1 ]; then
-          echo "❌ You must submit exactly ONE CSV file."
+          echo "❌ Submit exactly ONE CSV file."
           exit 1
         fi
 
-        FILE=$(echo $FILES)
         ACTOR="${{ github.actor }}"
         EXPECTED="submissions/${ACTOR}.csv"
 
         if [ "$FILE" != "$EXPECTED" ]; then
-          echo "❌ Submission filename must be: $EXPECTED"
+          echo "❌ Filename must be: $EXPECTED"
           exit 1
         fi
 
         echo "file=$FILE" >> $GITHUB_OUTPUT
         echo "username=$ACTOR" >> $GITHUB_OUTPUT
-        echo "✅ Valid submission from $ACTOR"
-
-    ############################################################
-    # VALIDATE ON PUSH (MERGE)
-    ############################################################
-
-    - name: Detect submission file on push
-      id: detect_push
-      if: github.event_name == 'push'
-      run: |
-        FILE=$(git diff --name-only HEAD~1 HEAD | grep -E '^submissions/.*\.csv$' || true)
-
-        if [ -z "$FILE" ]; then
-          echo "No submission file found."
-          exit 1
-        fi
-
-        USERNAME=$(basename "$FILE" .csv)
-
-        echo "file=$FILE" >> $GITHUB_OUTPUT
-        echo "username=$USERNAME" >> $GITHUB_OUTPUT
 
     ############################################################
     # EVALUATE
     ############################################################
 
-    - name: Evaluate submission
+    - name: Evaluate
       run: |
-        mkdir -p results
+        FILE="${{ steps.validate.outputs.file }}"
+        USER="${{ steps.validate.outputs.username }}"
 
-        if [ "${{ github.event_name }}" == "pull_request" ]; then
-          FILE="${{ steps.validate.outputs.file }}"
-          USERNAME="${{ steps.validate.outputs.username }}"
-        else
-          FILE="${{ steps.detect_push.outputs.file }}"
-          USERNAME="${{ steps.detect_push.outputs.username }}"
-        fi
-
-        echo "Evaluating $FILE (team: $USERNAME)..."
-
-        python scoring_script.py "$FILE" --json > "results/${USERNAME}_output.txt"
-
-        python scripts/extract_scores.py "$USERNAME" >> results/scores.txt
-
-        cat results/scores.txt
+        python scoring_script.py "$FILE" --json > result.txt
+        cat result.txt
 
     ############################################################
-    # UPDATE LEADERBOARD (ONLY AFTER MERGE)
+    # COMMENT RESULTS
     ############################################################
 
-    - name: Update leaderboard
-      if: github.event_name == 'push'
-      run: |
-        python scripts/update_leaderboard_from_scores.py
-
-    - name: Generate HTML leaderboard
-      if: github.event_name == 'push'
-      run: |
-        python scripts/generate_leaderboard.py
-
-    ############################################################
-    # COMMENT PR WITH RESULTS
-    ############################################################
-
-    - name: Comment PR with results
-      if: github.event_name == 'pull_request'
+    - name: Comment PR
       uses: actions/github-script@v6
       with:
         script: |
           const fs = require('fs');
-          const path = require('path');
-
-          let comment = "## 📊 Submission Evaluation Results\n\n";
-
-          const resultsDir = 'results';
-          if (fs.existsSync(resultsDir)) {
-            const files = fs.readdirSync(resultsDir);
-
-            for (const file of files) {
-              if (file.endsWith('_output.txt')) {
-                const teamName = file.replace('_output.txt', '');
-                const content = fs.readFileSync(path.join(resultsDir, file), 'utf8');
-                comment += `### ${teamName}\n\n\`\`\`\n${content}\n\`\`\`\n\n`;
-              }
-            }
-          }
-
-          comment += "If merged, the leaderboard will update automatically.\n";
-          comment += `👉 https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/leaderboard.html`;
+          const result = fs.readFileSync('result.txt', 'utf8');
 
           github.rest.issues.createComment({
             issue_number: context.issue.number,
             owner: context.repo.owner,
             repo: context.repo.repo,
-            body: comment
+            body: `## 📊 Evaluation Result\n\n\`\`\`\n${result}\n\`\`\``
           });
-
-    ############################################################
-    # REMOVE SUBMISSIONS BEFORE COMMIT (HIDE CSVs)
-    ############################################################
-
-    - name: Remove submission files
-      if: github.event_name == 'push'
-      run: |
-        rm -f submissions/*.csv
-
-    ############################################################
-    # COMMIT LEADERBOARD
-    ############################################################
-
-    - name: Commit and push leaderboard
-      if: github.event_name == 'push'
-      run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-
-        git add leaderboard.json leaderboard.html
-        git diff --staged --quiet || git commit -m "Auto-update leaderboard [skip ci]"
-        git push || echo "Nothing to push"
